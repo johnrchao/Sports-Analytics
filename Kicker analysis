@@ -1,0 +1,75 @@
+
+library(tidyverse)
+
+all <- all %>%
+  mutate(FieldGoalResult = as.numeric(ifelse(FieldGoalResult == 'Good','1','0')))
+
+summary(all$FieldGoalResult)
+
+kick <- all %>%
+  filter(down == 4,
+         PlayType == "Field Goal") %>%
+  group_by(FieldGoalDistance) %>%
+  mutate(AVG_prob = mean(FieldGoalResult)) %>%
+  mutate(AVG_Exp = mean(ExpPts)) %>%
+  mutate(SDev = sd(FieldGoalResult)) %>%
+  select(FieldGoalDistance,
+         AVG_Exp,
+         AVG_prob,
+         SDev,
+         yrdline100)
+
+expt_pts <- all %>%
+  filter(down == 1,
+         qtr == 1,2,3) %>%
+  group_by(yrdline100) %>%
+  mutate(one_down_EP = mean(ExpPts)) %>%
+  select(one_down_EP,
+         yrdline100)
+
+head(expt_pts)
+
+head(kick)
+
+new_names <- c("Field Goal Distance", 
+               "Average Expected Points", 
+               "Average_Accuracy", 
+               "SD of Accuracy")
+
+
+names(kick) <- new_names  
+
+kick <- unique(kick)
+
+expt_pts <- unique(expt_pts)
+
+head(expt_pts)
+
+superkick <- merge(expt_pts, kick, by.x = 'yrdline100', by.y = 'yrdline100')
+
+superkick <- superkick %>%
+  mutate(Average_EP = (AVG_prob*2.3)+((1-AVG_prob)*-(one_down_EP)))
+
+superkick <- superkick %>%
+  mutate(Test_prob_1 = SDev+AVG_prob) %>%
+  mutate(Test_prob_.3 = (SDev * .3)+AVG_prob)
+
+superkick$Test_prob_1[superkick$Test_prob_1 > 1.00] <- 1.00
+
+superkick$Test_prob_.3[superkick$Test_prob_.3 > 1.00] <- 1.00
+
+summary(superkick)
+
+superkick <- superkick %>%
+  mutate(Test_EP_1 = (Test_prob_1*2.3)+((1-Test_prob_1)*-(one_down_EP))) %>%
+  mutate(Test_EP_.3 = (Test_prob_.3 *2.3) +((1-Test_prob_.3)*-(one_down_EP)))
+
+superkick <- superkick %>%
+  mutate(Test_difference_1 = Test_EP_1 - Average_EP) %>%
+  mutate(Test_difference_.3 = Test_EP_.3 - Average_EP)
+
+head(superkick)
+
+summary(superkick)
+
+write.csv(superkick, 'Final Assignment/kicker.csv')
