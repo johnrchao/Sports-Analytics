@@ -1,0 +1,274 @@
+echo "# Sports-Analytics" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git remote add origin https://github.com/johnrchao/Sports-Analytics.git
+git push -u origin master
+                library(tidyverse)
+
+data_09 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2009.csv')
+data10 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2010.csv')
+data11 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2011.csv')
+data12 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2012.csv')
+data13 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2013.csv')
+data14 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2014.csv')
+data15 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2015.csv')
+data16 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2016.csv')
+data17 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2017.csv')
+data18 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2018.csv')
+data19 <- read_csv('Notre Dame MBA/Sports Analytics/Data/reg_pbp_2019.csv')
+
+all <- do.call('rbind', list(data_09,
+                             data10,
+                             data11,
+                             data12,
+                             data13,
+                             data14,
+                             data15,
+                             data16,
+                             data17,
+                             data18,
+                             data19))
+
+
+glimpse(all$ep)
+
+expt_pts <- all %>%
+  filter(down == 1,
+         qtr == c(1,2,3)) %>%
+  group_by(yardline_100) %>%
+  mutate(avg_expt_pts = mean(ep)) %>%
+  select(avg_expt_pts,
+         yardline_100)
+
+test <- unique(expt_pts)
+
+
+write.csv(test, 'Final Assignment/First Down expected points.csv')
+
+head(expt_pts)
+
+expt_pts %>%
+  ggplot(aes(yardline_100, avg_expt_pts))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Yardline", 
+       y = "Average Expected Points",
+       title = "Expected Points",
+       subtitle = "by 1st Down Field Position (2009-2019)")+
+  theme_minimal()
+
+### baseline qb acc
+x<-all
+
+summary(all$complete_pass)
+
+all <- all %>%
+  mutate(pass_outcome = as.numeric(ifelse(pass_outcome == 'Complete','1','0')))
+
+baseline_qb <- all %>%
+  filter(play_type == 'pass',
+         posteam != 'NE')%>%
+  group_by(air_yards) %>%
+  mutate(Accuracy_Probability = mean(complete_pass)) %>%
+  mutate(Avg_EP = mean(ep)) %>%
+  select(air_yards,
+         Accuracy_Probability,
+         Avg_EP)
+
+summary(baseline_qb)
+
+head(baseline_qb)
+
+baseline_qb <- unique(baseline_qb)
+
+baseline_qb %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Avg_EP))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Expected Points",
+       title = "Expected Points Passing",
+       subtitle = "by 4th Down Air Yards (2009-2019)")+
+  theme_minimal()
+
+write.csv(baseline_qb, 'Final Assignment/baseline_qb.csv')
+
+baseline_qb %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Accuracy_Probability))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Accuracy",
+       title = "Average Accuracy of 4th down passes",
+       subtitle = "by Air Yards (2009-2019)")+
+  theme_minimal()
+
+
+## Tom
+
+colnames(data10)
+
+tom_brady <- all %>%
+  filter(play_type == 'pass',
+         posteam == 'NE',
+         passer_player_name == 'T.Brady')%>%
+  group_by(air_yards) %>%
+  mutate(Accuracy_Probability = mean(complete_pass)) %>%
+  mutate(Avg_EP = mean(ep)) %>%
+  select(air_yards,
+         Accuracy_Probability,
+         Avg_EP)
+
+glimpse(tom_brady)
+
+tom_brady <- unique(tom_brady)
+
+write.csv(tom_brady, 'Final Assignment/Tom Brady.csv')          
+          
+tom_brady %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Avg_EP))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Expected Points",
+       title = "Tom Brady's Expected Points Passing",
+       subtitle = "by 4th Down Air Yards (2009-2019)")+
+  theme_minimal()
+
+summary(tom_brady)
+
+tom_brady %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Accuracy_Probability))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Accuracy",
+       title = "Tom Brady's Average Accuracy of 4th down passes",
+       subtitle = "by Air Yards (2009-2019)")+
+  theme_minimal()
+
+summary(baseline_qb)
+summary(tom_brady)
+
+
+new <- merge(tom_brady, baseline_qb, by.x = 'air_yards', by.y = 'air_yards', sort = T)
+
+names <- c("Air_Yards", "Tom_Accuracy", "Tom_EP", "Base_Accuracy", "Base_EP")
+
+names(new) <- names
+
+summary(new)
+
+new <- new %>%
+  mutate(Tom_Baseline_EP_difference = Tom_EP-Base_EP)
+
+summary(mitch)
+
+with_mitch <- merge(mitch, new, by.x = 'air_yards', by.y = 'Air_Yards', sort = T)
+
+summary(with_mitch)
+
+names(with_mitch)[2] <- 'Mitch_Accuracy'
+
+names(with_mitch)[3] <- 'Mitch_EP'
+
+with_mitch <- with_mitch %>%
+  mutate(Mitch_baseline_EP_difference = Mitch_EP - Base_EP) %>%
+  mutate(Tom_Mitch_EP_difference = Tom_EP - Mitch_EP)
+
+summary(with_mitch)
+
+write.csv(with_mitch, 'Final Assignment/QBcompare_Mitch.csv')
+
+### mitch 
+library(tidyverse)
+
+tail(data19$passer_player_name)
+
+mitch <- all %>%
+  filter(play_type == 'pass',
+         posteam == 'CHI',
+         passer_player_name == 'M.Trubisky')%>%
+  group_by(air_yards) %>%
+  mutate(Accuracy_Probability = mean(complete_pass)) %>%
+  mutate(Avg_EP = mean(ep)) %>%
+  select(air_yards,
+         Accuracy_Probability,
+         Avg_EP)
+
+head(mitch)
+
+mitch <- unique(mitch)
+
+write.csv(tom_brady, 'Final Assignment/Tom Brady.csv')          
+
+tom_brady %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Avg_EP))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Expected Points",
+       title = "Tom Brady's Average Expected Points Passing",
+       subtitle = "by Air Yards (2009 -2019)")+
+  theme_minimal()
+
+mitch %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Avg_EP))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Expected Points",
+       title = "Mitch Trubisky's Average Expected Points Passing",
+       subtitle = "by Air Yards (2017 -2019)")+
+  theme_minimal()
+
+baseline_qb %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Avg_EP))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Expected Points",
+       title = "Average Expected Points Passing",
+       subtitle = "by Air Yards (2009 -2019)")+
+  theme_minimal()
+
+summary(tom_brady)
+
+tom_brady %>%
+  filter(air_yards >= 0) %>%
+  ggplot(aes(air_yards, Accuracy_Probability))+
+  geom_point() +
+  geom_smooth()+
+  labs(x = "Passing Distance", 
+       y = "Average Accuracy",
+       title = "Tom Brady's Average Accuracy of 4th down passes",
+       subtitle = "by Air Yards (2009-2019)")+
+  theme_minimal()
+
+summary(baseline_qb)
+summary(tom_brady)
+
+
+new <- merge(tom_brady, baseline_qb, by.x = 'air_yards', by.y = 'air_yards', sort = T)
+
+names <- c("Air_Yards", "Tom_Accuracy", "Tom_EP", "Base_Accuracy", "Base_EP")
+
+mithc
+
+
+names(new) <- names
+
+summary(new)
+
+
+
+
+
